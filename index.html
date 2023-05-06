@@ -117,8 +117,15 @@
             $a.text(title.name);
             $a.attr("href", title.link)
             $a.attr("target", "_blank")
+
+            $a2 = $("<a>");
+            $a2.text("Zoro");
+            $a2.attr("href", "https://zoro.to/search?keyword=" + encodeURIComponent(title.name).replace(/%20/g, '+'))
+            $a2.attr("target", "_blank")
+            $a2.addClass('ms-3')
             
             $div.append($a);
+            $div.append($a2);
 
             if(episodeStatus.includes(status)) {
                 $input = $('<input type="number" class="js-episode ms-3" placeholder="Episode Number" min="0"></input>')
