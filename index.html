@@ -92,7 +92,7 @@
 
         function parseZoroExport(json) {
             $(".js-title").remove();
-            $(".js-status, js-episodealert").addClass('d-none')
+            $(".js-status, .js-episodealert").addClass('d-none')
             for (const key in json) {
 
                 const status = key.replace(/[\s+-]/g, "").toLowerCase();
