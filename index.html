@@ -110,26 +110,33 @@
         }
 
         function generateTitle(key, status,title) {
-            $div = $("<div class='mb-1'>");
-            $div.addClass("js-title");
+            $div = $("<div class='row mb-3 js-title'>");
 
             $a = $("<a>");
             $a.text(title.name);
             $a.attr("href", title.link)
             $a.attr("target", "_blank")
 
-            $a2 = $("<a>");
+            $col1 = $("<div class='col-8'>")
+            $col1.append($a);
+
+            $a2 = $(" <a>");
             $a2.text("Zoro");
             $a2.attr("href", "https://zoro.to/search?keyword=" + encodeURIComponent(title.name).replace(/%20/g, '+'))
             $a2.attr("target", "_blank")
-            $a2.addClass('ms-3')
-            
-            $div.append($a);
-            $div.append($a2);
+
+            $col1.append($a2);
 
             if(episodeStatus.includes(status)) {
-                $input = $('<input type="number" class="js-episode ms-3" placeholder="Episode Number" min="0"></input>')
-                $div.append($input);
+                $input = $('<div class="form-group"><input type="number" class="js-episode form-control" placeholder="Episode Number" min="0"></input></div>')
+
+                $col2 = $("<div class='col-4'>")
+                $col2.append($input);
+
+                $div.append($col1);
+                $div.append($col2);
+            } else {
+                $div.append($col1);
             }
 
             $div.data("status", status);
