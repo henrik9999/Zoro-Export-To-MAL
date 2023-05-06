@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Zoro Export to MyAnimeList</title>
+    <link href="./css/bootstrap.min.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="container">
+        <h1>Zoro Export to MyAnimeList</h1>
+
+        <div class="mb-3">
+            <label for="zoroExportInput" class="form-label">Please select the Exported Zoro JSON file that you can get from <a href="https://zoro.to/user/mal?tab=export">here</a>, make sure to have "Group by folder" enabled</label>
+            <input class="form-control" type="file" id="zoroExportInput">
+        </div>
+
+        <div class="alert alert-warning d-none js-episodealert" role="alert">
+            You must manually enter the Episode Numbers because they are missing from the Zoro Export. If you don't, Episode 0 will be used. 
+        </div>
+
+        <div class="mb-3 js-status js-watching d-none">
+            <h2>Watching</h2>
+            <div class="js-titles">
+            </div>
+        </div>
+        <div class="mb-3 js-status js-onhold d-none">
+            <h2>On-Hold</h2>
+            <div class="js-titles">
+            </div>
+        </div>
+        <div class="mb-3 js-status js-dropped d-none">
+            <h2>Dropped</h2>
+            <div class="js-titles">
+            </div>
+        </div>
+        <div class="mb-3 js-status js-plantowatch d-none">
+            <h2>Plan to watch</h2>
+            <div class="js-titles">
+            </div>
+        </div>
+        <div class="mb-3 js-status js-completed d-none">
+            <h2>Completed</h2>
+            <div class="js-titles">
+            </div>
+        </div>
+
+        <div class="mb-3 d-none js-malexport">
+            <button type="button" class="btn btn-primary" onclick="generateMALExport()">Get MyAnimeList File</button>
+            <div>You can import the File on MyAnimeList <a href="https://myanimelist.net/import.php">here</a> select "MyAnimeList.net Import" and then pick the downloaded file "Zoro_Export_to_MyAnimeList.xml"</div>
+        </div>
+    </div>
+    <script src="./js/cash.min.js"></script>
+    <script>
+        const episodeStatus = ['watching', 'dropped', 'onhold'];
+
+        $(function () {
+            $('#zoroExportInput').on('change', function () {
+                const fileReader = new FileReader();
+                fileReader.onload = function () {
+                    validateZoroExport(fileReader.result);
+                };
+                fileReader.readAsText($('#zoroExportInput').prop('files')[0]);
+            });
+        })
+
+        function validateZoroExport(json) {
+            try {
+                const parsed = JSON.parse(json);
+
+                const validStatus = [ "Watching", "Plan to watch", "On-Hold", "Dropped", "Completed" ];
+
+                if(!Object.keys(parsed).length) {
+                    alert("invalid json provided!");
+                    return;
+                }
+
+                for (const key in parsed) {
+                    if(!validStatus.includes(key)) {
+                        alert("invalid json provided!");
+                        return;
+                    }
+                }
+
+                parseZoroExport(parsed);
+            } catch (e) {
+                console.log(e);
+                alert("not a json file!");
+            }
+        }
+
+        function parseZoroExport(json) {
+            $(".js-title").remove();
+            $(".js-status, js-episodealert").addClass('d-none')
+            for (const key in json) {
+
+                const status = key.replace(/[\s+-]/g, "").toLowerCase();
+                $(`.js-${status}`).removeClass("d-none");
+
+                if(episodeStatus.includes(status)) {
+                    $('.js-episodealert').removeClass('d-none');
+                }
+                for (const title of json[key]) {
+                    generateTitle(key, status, title);
+                }
+            }
+
+            $('.js-malexport').removeClass('d-none');
+        }
+
+        function generateTitle(key, status,title) {
+            $div = $("<div class='mb-1'>");
+            $div.addClass("js-title");
+
+            $a = $("<a>");
+            $a.text(title.name);
+            $a.attr("href", title.link)
+            $a.attr("target", "_blank")
+            
+            $div.append($a);
+
+            if(episodeStatus.includes(status)) {
+                $input = $('<input type="number" class="js-episode ms-3" placeholder="Episode Number" min="0"></input>')
+                $div.append($input);
+            }
+
+            $div.data("status", status);
+            $div.data("malid", title.link.split("/")[4])
+            $div.data("title", title.name)
+
+            $(`.js-${status} .js-titles`).append($div);
+        }
+
+        function formatStatus(status) {
+            switch(status) {
+                case "watching":
+                    return "Watching";
+                case "onhold":
+                    return "On-Hold";
+                case "dropped":
+                    return "Dropped";
+                case "plantowatch":
+                    return "Plan to Watch";
+                case "completed":
+                    return "Completed";
+            }
+        }
+
+        function generateMALExport() {
+            $titles = $('.js-title');
+
+            let xml = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>';
+
+            xml += `<myanimelist>\n<myinfo>\n<user_export_type>1</user_export_type>\n</myinfo>\n`;
+
+            $titles.each(function () {
+                $this = $(this);
+                xml += '<anime>\n'
+                xml += '<series_animedb_id>'+$this.data('malid')+'</series_animedb_id>\n'
+                xml += '<update_on_import>1</update_on_import>\n'
+                xml += '<series_title><![CDATA['+$this.data('title')+']]></series_title>\n'
+
+                if(episodeStatus.includes($this.data('status'))) {
+                    xml += '<my_watched_episodes>'+ ($this.find('.js-episode').val() || "0") +'</my_watched_episodes>\n'
+                }
+                xml += '<my_status>'+formatStatus($this.data('status'))+'</my_status>\n'
+
+                xml += '</anime>\n'
+            });
+
+            xml += `</myanimelist>`;
+
+            download("Zoro_Export_to_MyAnimeList.xml", xml)
+        }
+
+        function download(filename, text) {
+            var element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+
+            element.style.display = 'none';
+            document.body.appendChild(element);
+
+            element.click();
+
+            document.body.removeChild(element);
+        }
+    </script>
+</body>
+</html>
